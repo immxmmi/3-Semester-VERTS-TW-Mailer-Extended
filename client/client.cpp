@@ -63,8 +63,9 @@ int main(int argc, char **argv){
 // INIT ADDRESS
    memset(&address, 0, sizeof(address));  
    address.sin_family = AF_INET;
-   address.sin_addr.s_addr = INADDR_ANY; // IP EINBINDEN
-   address.sin_port = htons(PORT);
+  // address.sin_addr.s_addr = INADDR_ANY; // IP EINBINDEN
+  inet_aton(argv[1],&address.sin_addr);
+  address.sin_port = htons(PORT);
 //##########################################
 
 

@@ -67,7 +67,7 @@ int main(int argc, char **argv)
    // Benachrichtigung  - ########################
    if (argc < 3 || atoi(argv[1]) == 0)
    {
-      fprintf(stderr, "\nUsage: ./server [PORT] [mail-spool-name]\n");
+      fprintf(stderr, "\nUsage: ./server <PORT> <mail-spool-name>\n");
       return EXIT_FAILURE;
    }
    //##########################################
@@ -499,7 +499,6 @@ int DELETE(char* path,char* buffer, int* current_socket){
     free(msgCopy);
     return 0;
 }
-
 // -> QUIT
 void QUIT(int *current_socket)
 {
