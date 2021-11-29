@@ -3,22 +3,27 @@
 #include <netinet/in.h>
 #include <arpa/inet.h>
 #include <sys/stat.h>
+#include <sys/wait.h>
 #include <unistd.h>
 #include <stdlib.h>
 #include <stdio.h>
 #include <string.h>
+
 #include <signal.h>
 #include <pthread.h>
+#include <ldap.h>
+#include <lber.h>
+
 #include "server_error.h"
 #include <fstream>
-#include<string>
 #include <filesystem>
 #include <iostream>
 #include <vector>
-#include <ldap.h>
+
 #include <sstream>
-#include <sys/stat.h>
-#include <lber.h>
+
+#include <time.h>
+
 
 using namespace std;
 namespace fs = filesystem;
@@ -190,55 +195,78 @@ PORT = atoi(argv[1]);
    }
    ////////////////////////////////////////////////////////////////////////////
 
+   /// FORKEN -- VAR
+    pid_t childPid; // KIND PROZESS
+    static int childPidCounter = 0; // KIND PROZESS ZÄHLER
+    // //////////////////////////////////////////////////////////////////////////
+   while (!abortRequested) {
+       ///CONNECTION////////////////////////////////////////////////////////////////
+       printf("Waiting for connections...\n");
+       ////////////////////////////////////////////////////////////////////////////
 
-   while (!abortRequested)
-   {
-      ///CONNECTION////////////////////////////////////////////////////////////////
-      printf("Waiting for connections...\n");
-      ////////////////////////////////////////////////////////////////////////////
+       /////////////////////////////////////////////////////////////////////////
+       /// ACCEPTS CONNECTION SETUP
+       /// blocking, might have an accept-error on ctrl+c
+       ///--> Socket - ACCEPT ######################
+       addrlen = sizeof(struct sockaddr_in);
 
-      /////////////////////////////////////////////////////////////////////////
-      /// ACCEPTS CONNECTION SETUP
-      /// blocking, might have an accept-error on ctrl+c
-      ///--> Socket - ACCEPT ######################
-      addrlen = sizeof(struct sockaddr_in);
+       /// wird eine Verbindung gefunden wird eine neue Socket erstellt
+       /// damit der server_socket weiter listen kann
+       /// Adresse wird in clientaddress gespeichert
 
-      /// wird eine Verbindung gefunden wird eine neue Socket erstellt
-      /// damit der server_socket weiter listen kann
-      /// Adresse wird in clientaddress gespeichert
-
-      if ((new_socket = accept(server_socket, (struct sockaddr *)&clientaddress, &addrlen)) == -1)
-      {
-         /// DATEN BEKOMMEN wird überprüft ob abgebrochen wird
-         if (abortRequested)
-         {
-            server_error(5);
-         }
-         else
-         {
-            server_error(4);
-         }
-         break;
-      }
+       if ((new_socket = accept(server_socket, (struct sockaddr *) &clientaddress, &addrlen)) == -1) {
+           /// DATEN BEKOMMEN wird überprüft ob abgebrochen wird
+           if (abortRequested) {
+               server_error(5);
+           } else {
+               server_error(4);
+           }
+           break;
+       }
 
 
-      /////////////////////////////////////////////////////////////////////////
-      /// START CLIENT
-      /// Client connect
+       /////////////////////////////////////////////////////////////////////////
+       /// START CLIENT
+       /// Client connect
 
-      ///    [Socket]          [Socket]
-      /// zwei socket  Quelladresse <--> Zieladress = verbindung
-      /// Datei Kommunikation nur die DATA <--> Programm
+       ///    [Socket]          [Socket]
+       /// zwei socket  Quelladresse <--> Zieladress = verbindung
+       /// Datei Kommunikation nur die DATA <--> Programm
 
-      printf("Client connected from %s:%d...\n",
-             inet_ntoa(clientaddress.sin_addr), // Liest die Client adresse aus
-             ntohs(clientaddress.sin_port));    // Liest den Port vom Client aus
 
-      /// gibt die Client adresse aus [IP] + [Port]
-      clientCommunication(&new_socket); /// und startet die Kommunikation mit dem Client
 
-      new_socket = -1;
+       printf("Client connected from %s:%d...\n",
+              inet_ntoa(clientaddress.sin_addr), // Liest die Client adresse aus
+              ntohs(clientaddress.sin_port));    // Liest den Port vom Client aus
+
+       ////////////////////////////////////////////////////////////////////////
+       /// FORKEN
+
+       if ((childPid = fork()) == 0) {  // WENN DAS FORKEN ERFOLGREICH WAR
+           /// gibt die Client adresse aus [IP] + [Port]
+
+           childPidCounter++; // Zählt die Kind-Prozesse
+           clientCommunication(&new_socket); /// und startet die Kommunikation mit dem Client
+           new_socket = -1;
+           exit(EXIT_SUCCESS);
+       } else if (childPid == -1)  // FORK ERROR
+       {
+           perror("ERROR - FORK");
+           exit(EXIT_FAILURE);
+       }
+
+
+       if (childPid != 0 && childPid != -1) {
+           for (int i = 0; i < childPidCounter; i++) // BEENDET ALLE PROZESSE
+           {
+               wait(NULL);
+           }
+
+           //  QUIT(current_socket);  // SHUTDOWN SOCKET
+       }
+
    }
+
 
    return EXIT_SUCCESS;
 }
@@ -306,10 +334,13 @@ void *clientCommunication(void *client_data)
 
 
 
+
+
+
    } while (strcmp(buffer, "quit") != 0 && !abortRequested);
 
 
-   QUIT(current_socket);
+   //QUIT(current_socket);
    return NULL;
 }
 
@@ -331,206 +362,6 @@ int LOGIN(char *buffer){
     free(msgCopy);
     memset(buffer,0,BUF);
     return checkLOGIN(username, password);
-}
-int checkLOGIN(char* ldap_username, char* ldap_password){
-
-    const char *ldapUri = "ldap://ldap.technikum-wien.at:389";
-    const int ldapVersion = LDAP_VERSION3;
-
-
-    //// USER////////////////////////////////////////////////
-    // read username (bash: export ldapuser=<yourUsername>)
-    char ldapBindUser[256];
-    char rawLdapUser[128];
-
-    if(true){
-        strcpy(rawLdapUser, ldap_username);
-        sprintf(ldapBindUser, "uid=%s,ou=people,dc=technikum-wien,dc=at", rawLdapUser);
-        printf("user set to: %s\n", ldapBindUser);
-    }else{
-        const char *rawLdapUserEnv = getenv("ldapuser");
-        if (rawLdapUserEnv == NULL)
-        {
-            printf("(user not found... set to empty string)\n");
-            strcpy(ldapBindUser, "");
-        }
-        else
-        {
-            sprintf(ldapBindUser, "uid=%s,ou=people,dc=technikum-wien,dc=at", rawLdapUserEnv);
-            printf("user based on environment variable ldapuser set to: %s\n", ldapBindUser);
-        }
-    }
-/////////////////////////////////////////////////////////
-
-    //// PW ////////////////////////////////////////////////
-// read password (bash: export ldappw=<yourPW>)
-    char ldapBindPassword[256];
-    if (1 ==1)
-    {
-        strcpy(ldapBindPassword, "Immx4177010331869602mmi");
-        printf("pw taken over from commandline\n");
-    }
-
-    else
-    {
-        const char *ldapBindPasswordEnv = getenv(ldap_password);
-        if (ldapBindPasswordEnv == NULL)
-        {
-            strcpy(ldapBindPassword, "");
-            printf("(pw not found... set to empty string)\n");
-        }
-        else
-        {
-            strcpy(ldapBindPassword, ldapBindPasswordEnv);
-            printf("pw taken over from environment variable ldappw\n");
-        }
-    }
-/////////////////////////////////////////////////////////
-
-    // search settings
-    const char *ldapSearchBaseDomainComponent = "dc=technikum-wien,dc=at";
-    char searchElement[20];
-    sprintf(searchElement,"(uid=");
-    strcat(searchElement,ldap_username);
-    strcat(searchElement,")");
-    const char *ldapSearchFilter = searchElement;
-    ber_int_t ldapSearchScope = LDAP_SCOPE_SUBTREE;
-    const char *ldapSearchResultAttributes[] = {"uid", "cn", NULL};
-
-    // general
-    int rc = 0; // return code
-
-
-
-
-    ////////////////////////////////////////////////////////////////////////////
-    /// setup LDAP connection
-    ///
-    LDAP *ldapHandle;
-    rc = ldap_initialize(&ldapHandle, ldapUri);
-    if (rc != LDAP_SUCCESS)
-    {
-        fprintf(stderr, "ldap_init failed\n");
-        return -1;
-    }
-    printf("connected to LDAP server %s\n", ldapUri);
-
-    ////////////////////////////////////////////////////////////////////////////
-    /// set verison options
-    rc = ldap_set_option( ldapHandle,
-            LDAP_OPT_PROTOCOL_VERSION, // OPTION
-            &ldapVersion);             // IN-Value
-    if (rc != LDAP_OPT_SUCCESS)
-    { fprintf(stderr, "ldap_set_option(PROTOCOL_VERSION): %s\n", ldap_err2string(rc));
-        ldap_unbind_ext_s(ldapHandle, NULL, NULL);
-        return -1;
-    }
-
-    ////////////////////////////////////////////////////////////////////////////
-    /// start CONNECTION
-
-    rc = ldap_start_tls_s(ldapHandle,NULL,NULL);
-    if (rc != LDAP_SUCCESS)
-    {
-        fprintf(stderr, "ldap_start_tls_s(): %s\n", ldap_err2string(rc));
-        ldap_unbind_ext_s(ldapHandle, NULL, NULL);
-        return -1;
-    }
-
-    ////////////////////////////////////////////////////////////////////////////
-    /// bind credentials
-    BerValue bindCredentials;
-    bindCredentials.bv_val = (char *)ldapBindPassword;
-    bindCredentials.bv_len = strlen(ldapBindPassword);
-    BerValue *servercredp; // server's credentials
-    rc = ldap_sasl_bind_s(
-            ldapHandle,
-            ldapBindUser,
-            LDAP_SASL_SIMPLE,
-            &bindCredentials,
-            NULL,
-            NULL,
-            &servercredp);
-    if (rc != LDAP_SUCCESS)
-    {
-        fprintf(stderr, "LDAP bind error: %s\n", ldap_err2string(rc));
-        ldap_unbind_ext_s(ldapHandle, NULL, NULL);
-        return -1;
-    }
-
-    ////////////////////////////////////////////////////////////////////////////
-    /// perform ldap search
-
-    LDAPMessage *searchResult;
-    rc = ldap_search_ext_s(
-            ldapHandle,
-            ldapSearchBaseDomainComponent,
-            ldapSearchScope,
-            ldapSearchFilter,
-            (char **)ldapSearchResultAttributes,
-            0,
-            NULL,
-            NULL,
-            NULL,
-            500,
-            &searchResult);
-    if (rc != LDAP_SUCCESS)
-    {
-        fprintf(stderr, "LDAP search error: %s\n", ldap_err2string(rc));
-        ldap_unbind_ext_s(ldapHandle, NULL, NULL);
-        return -1;
-    }
-
-    printf("Total results: %d\n", ldap_count_entries(ldapHandle, searchResult));
-
-
-    ////////////////////////////////////////////////////////////////////////////
-    /// get result of search
-    LDAPMessage *searchResultEntry;
-    for (searchResultEntry = ldap_first_entry(ldapHandle, searchResult);
-         searchResultEntry != NULL;
-         searchResultEntry = ldap_next_entry(ldapHandle, searchResultEntry))
-    {
-    /////////////////////////////////////////////////////////////////////////
-
-        printf("DN: %s\n", ldap_get_dn(ldapHandle, searchResultEntry));
-
-        /////////////////////////////////////////////////////////////////////////
-        // Attributes
-        BerElement *ber;
-        char *searchResultEntryAttribute;
-        for (searchResultEntryAttribute = ldap_first_attribute(ldapHandle, searchResultEntry, &ber);
-             searchResultEntryAttribute != NULL;
-             searchResultEntryAttribute = ldap_next_attribute(ldapHandle, searchResultEntry, ber))
-        {
-            BerValue **vals;
-            if ((vals = ldap_get_values_len(ldapHandle, searchResultEntry, searchResultEntryAttribute)) != NULL)
-            {
-                for (int i = 0; i < ldap_count_values_len(vals); i++)
-                {
-                    printf("\t%s: %s\n", searchResultEntryAttribute, vals[i]->bv_val);
-                }
-                ldap_value_free_len(vals);
-            }
-
-            // free memory
-            ldap_memfree(searchResultEntryAttribute);
-        }
-        // free memory
-        if (ber != NULL)
-        {
-            ber_free(ber, 0);
-        }
-
-        printf("\n");
-    }
-
-    // free memory
-    ldap_msgfree(searchResult);
-
-    ldap_unbind_ext_s(ldapHandle, NULL, NULL);
-
-    return 0;
 }
 // -> SEND
 int SEND(char *buffer){
@@ -694,6 +525,7 @@ int QUIT(int *current_socket)
 }
 
 
+
 //GETTER
 char* getCommand(char* buffer){
     char *currentBuffer = (char *)malloc(strlen(buffer) * sizeof(char));
@@ -740,6 +572,208 @@ string getUserFileName(char* username, char* fileNumber){
     fileName.append(".txt");
     return fileName;
 }
+
+//LDAP
+int checkLOGIN(char* ldap_username, char* ldap_password){
+
+        const char *ldapUri = "ldap://ldap.technikum-wien.at:389";
+        const int ldapVersion = LDAP_VERSION3;
+
+
+        //// USER////////////////////////////////////////////////
+        // read username (bash: export ldapuser=<yourUsername>)
+        char ldapBindUser[256];
+        char rawLdapUser[128];
+
+        if(true){
+            strcpy(rawLdapUser, ldap_username);
+            sprintf(ldapBindUser, "uid=%s,ou=people,dc=technikum-wien,dc=at", rawLdapUser);
+            printf("user set to: %s\n", ldapBindUser);
+        }else{
+            const char *rawLdapUserEnv = getenv("ldapuser");
+            if (rawLdapUserEnv == NULL)
+            {
+                printf("(user not found... set to empty string)\n");
+                strcpy(ldapBindUser, "");
+            }
+            else
+            {
+                sprintf(ldapBindUser, "uid=%s,ou=people,dc=technikum-wien,dc=at", rawLdapUserEnv);
+                printf("user based on environment variable ldapuser set to: %s\n", ldapBindUser);
+            }
+        }
+/////////////////////////////////////////////////////////
+
+        //// PW ////////////////////////////////////////////////
+// read password (bash: export ldappw=<yourPW>)
+        char ldapBindPassword[256];
+        if (1 ==1)
+        {
+            strcpy(ldapBindPassword, "Immx4177010331869602mmi");
+            printf("pw taken over from commandline\n");
+        }
+
+        else
+        {
+            const char *ldapBindPasswordEnv = getenv(ldap_password);
+            if (ldapBindPasswordEnv == NULL)
+            {
+                strcpy(ldapBindPassword, "");
+                printf("(pw not found... set to empty string)\n");
+            }
+            else
+            {
+                strcpy(ldapBindPassword, ldapBindPasswordEnv);
+                printf("pw taken over from environment variable ldappw\n");
+            }
+        }
+/////////////////////////////////////////////////////////
+
+        // search settings
+        const char *ldapSearchBaseDomainComponent = "dc=technikum-wien,dc=at";
+        char searchElement[20];
+        sprintf(searchElement,"(uid=");
+        strcat(searchElement,ldap_username);
+        strcat(searchElement,")");
+        const char *ldapSearchFilter = searchElement;
+        ber_int_t ldapSearchScope = LDAP_SCOPE_SUBTREE;
+        const char *ldapSearchResultAttributes[] = {"uid", "cn", NULL};
+
+        // general
+        int rc = 0; // return code
+
+
+
+
+        ////////////////////////////////////////////////////////////////////////////
+        /// setup LDAP connection
+        ///
+        LDAP *ldapHandle;
+        rc = ldap_initialize(&ldapHandle, ldapUri);
+        if (rc != LDAP_SUCCESS)
+        {
+            fprintf(stderr, "ldap_init failed\n");
+            return -1;
+        }
+        printf("connected to LDAP server %s\n", ldapUri);
+
+        ////////////////////////////////////////////////////////////////////////////
+        /// set verison options
+        rc = ldap_set_option( ldapHandle,
+                              LDAP_OPT_PROTOCOL_VERSION, // OPTION
+                              &ldapVersion);             // IN-Value
+        if (rc != LDAP_OPT_SUCCESS)
+        { fprintf(stderr, "ldap_set_option(PROTOCOL_VERSION): %s\n", ldap_err2string(rc));
+            ldap_unbind_ext_s(ldapHandle, NULL, NULL);
+            return -1;
+        }
+
+        ////////////////////////////////////////////////////////////////////////////
+        /// start CONNECTION
+
+        rc = ldap_start_tls_s(ldapHandle,NULL,NULL);
+        if (rc != LDAP_SUCCESS)
+        {
+            fprintf(stderr, "ldap_start_tls_s(): %s\n", ldap_err2string(rc));
+            ldap_unbind_ext_s(ldapHandle, NULL, NULL);
+            return -1;
+        }
+
+        ////////////////////////////////////////////////////////////////////////////
+        /// bind credentials
+        BerValue bindCredentials;
+        bindCredentials.bv_val = (char *)ldapBindPassword;
+        bindCredentials.bv_len = strlen(ldapBindPassword);
+        BerValue *servercredp; // server's credentials
+        rc = ldap_sasl_bind_s(
+                ldapHandle,
+                ldapBindUser,
+                LDAP_SASL_SIMPLE,
+                &bindCredentials,
+                NULL,
+                NULL,
+                &servercredp);
+        if (rc != LDAP_SUCCESS)
+        {
+            fprintf(stderr, "LDAP bind error: %s\n", ldap_err2string(rc));
+            ldap_unbind_ext_s(ldapHandle, NULL, NULL);
+            return -1;
+        }
+
+        ////////////////////////////////////////////////////////////////////////////
+        /// perform ldap search
+
+        LDAPMessage *searchResult;
+        rc = ldap_search_ext_s(
+                ldapHandle,
+                ldapSearchBaseDomainComponent,
+                ldapSearchScope,
+                ldapSearchFilter,
+                (char **)ldapSearchResultAttributes,
+                0,
+                NULL,
+                NULL,
+                NULL,
+                500,
+                &searchResult);
+        if (rc != LDAP_SUCCESS)
+        {
+            fprintf(stderr, "LDAP search error: %s\n", ldap_err2string(rc));
+            ldap_unbind_ext_s(ldapHandle, NULL, NULL);
+            return -1;
+        }
+
+        printf("Total results: %d\n", ldap_count_entries(ldapHandle, searchResult));
+
+
+        ////////////////////////////////////////////////////////////////////////////
+        /// get result of search
+        LDAPMessage *searchResultEntry;
+        for (searchResultEntry = ldap_first_entry(ldapHandle, searchResult);
+             searchResultEntry != NULL;
+             searchResultEntry = ldap_next_entry(ldapHandle, searchResultEntry))
+        {
+            /////////////////////////////////////////////////////////////////////////
+
+            printf("DN: %s\n", ldap_get_dn(ldapHandle, searchResultEntry));
+
+            /////////////////////////////////////////////////////////////////////////
+            // Attributes
+            BerElement *ber;
+            char *searchResultEntryAttribute;
+            for (searchResultEntryAttribute = ldap_first_attribute(ldapHandle, searchResultEntry, &ber);
+                 searchResultEntryAttribute != NULL;
+                 searchResultEntryAttribute = ldap_next_attribute(ldapHandle, searchResultEntry, ber))
+            {
+                BerValue **vals;
+                if ((vals = ldap_get_values_len(ldapHandle, searchResultEntry, searchResultEntryAttribute)) != NULL)
+                {
+                    for (int i = 0; i < ldap_count_values_len(vals); i++)
+                    {
+                        printf("\t%s: %s\n", searchResultEntryAttribute, vals[i]->bv_val);
+                    }
+                    ldap_value_free_len(vals);
+                }
+
+                // free memory
+                ldap_memfree(searchResultEntryAttribute);
+            }
+            // free memory
+            if (ber != NULL)
+            {
+                ber_free(ber, 0);
+            }
+
+            printf("\n");
+        }
+
+        // free memory
+        ldap_msgfree(searchResult);
+
+        ldap_unbind_ext_s(ldapHandle, NULL, NULL);
+
+        return 0;
+    }
 
 // TOOLS
 void createMSG(char* path, char *sender, char *receiver, char *subject, std::string msg)
