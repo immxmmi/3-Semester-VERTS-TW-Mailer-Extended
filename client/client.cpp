@@ -88,7 +88,7 @@ int main(int argc, char **argv){
 
 
 do{
-     printf("Command >>  ");
+     printf("\nCommand >>  ");
 
       if (fgets(buffer, BUF, stdin) != NULL){      
          int size = strlen(buffer);
@@ -159,12 +159,14 @@ void sendToServer(int current_client_socket){
 void printBuffer(char *buff){
     char *currentBuffer = (char *)malloc(strlen(buff) * sizeof(char));
     char *line;
+    int line_counter = 0;
     strcpy(currentBuffer, buff);
     line = strtok(currentBuffer, ";");
 
     while(line != NULL){
-        printf(": %s\n",line);
+        printf("%d: %s\n",line_counter,line);
         line = strtok(NULL, ";");
+        line_counter++;
     }
 
 }
@@ -192,7 +194,6 @@ string getUsername(){
     return text;
 }
 
-
 string getNumber(){
     string text;
     bool check = true;
@@ -215,7 +216,9 @@ string getNumber(){
 }
 
 
+void Login(){
 
+}
 void SEND(){
 
     char temp_msg[BUF];
