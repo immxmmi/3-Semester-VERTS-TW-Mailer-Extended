@@ -41,6 +41,7 @@ using std::ifstream; using std::vector;
 int server_socket = -1;
 int new_socket = -1;
 int abortRequested = 0;
+int loginCounter = 0;
 char buffer[BUF] = "";
 ////////////////////////////////////
 
@@ -53,8 +54,12 @@ char buffer[BUF] = "";
 /// DEFAULT PATH + PORT ///////////
 int PORT = 4444;
 char path[20] = "./../mail/spool/";
+string currentIP="";
 ///////////////////////////////////
 
+/// BLACK LIST ////////////////////
+pthread_mutex_t mutexLockBlacklist;
+///////////////////////////////////
 
 /// CLIENT COMMUNICATION //////////
 void *clientCommunication(void *client_data);
@@ -75,6 +80,7 @@ vector<string> getFileInput(std::string path, std::string file);
 void sendStatus(int status,int *current_socket);
 string getUserPath(char* root, char* username);
 string getUserFileName(char* username, char* fileNumber);
+int addToBlacklist();
 ///////////////////////////////////
 
 
@@ -104,6 +110,15 @@ int main(int argc, char **argv)
       fprintf(stderr, "\nUsage: ./server <PORT> <mail-spool-name>\n");
       return EXIT_FAILURE;
    }
+////////////////////////////////////////////////////////////////////////////
+
+
+/// MUTEX /////////////////////////////////////////////////////////////////
+    if (pthread_mutex_init(&mutexLockBlacklist, NULL) != 0 )
+    {
+        printf("\n mutex init has failed\n");
+        return 1;
+    }
 ////////////////////////////////////////////////////////////////////////////
 
 
@@ -235,16 +250,17 @@ PORT = atoi(argv[1]);
        /// Datei Kommunikation nur die DATA <--> Programm
 
 
-
+       /// gibt die Client adresse aus [IP] + [Port]
        printf("Client connected from %s:%d...\n",
               inet_ntoa(clientaddress.sin_addr), // Liest die Client adresse aus
               ntohs(clientaddress.sin_port));    // Liest den Port vom Client aus
 
+              currentIP =  inet_ntoa(clientaddress.sin_addr);
        ////////////////////////////////////////////////////////////////////////
        /// FORKEN
 
        if ((childPid = fork()) == 0) {  // WENN DAS FORKEN ERFOLGREICH WAR
-           /// gibt die Client adresse aus [IP] + [Port]
+
 
            childPidCounter++; // Zählt die Kind-Prozesse
            clientCommunication(&new_socket); /// und startet die Kommunikation mit dem Client
@@ -394,7 +410,7 @@ int LIST(char* path,char* buffer,int* current_socket){
     int totalMSG = 0;
     fs::path p(getUserPath(path, username));
 
-    char buff[BUF];
+    char buff[BUF] = "";
     int size =0;
     bool is_empty = true;
 if(fs::exists(p) == true) {
@@ -445,7 +461,7 @@ int READ(char* path,char* buffer, int* current_socket){
     strtok(msgCopy, ";");
     char* username = strtok(NULL, ";");
     char* fileNumber = strtok(NULL, ";");
-    char buff[BUF];
+    char buff[BUF] = "";
 
     std::vector<string> lines = getFileInput(getUserPath(path,username),getUserFileName(username,fileNumber));
 
@@ -580,6 +596,14 @@ string getUserFileName(char* username, char* fileNumber){
 //LDAP
 string checkLOGIN(char* ldap_username, char* ldap_password){
 
+    //if(checkBlacklist()){
+     //   return "false";
+   // }
+    if(loginCounter > 2){
+        addToBlacklist();
+        loginCounter = 0;
+        return "false";
+    }
     const char *ldapUri = "ldap://ldap.technikum-wien.at:389";
     const int ldapVersion = LDAP_VERSION3;
 
@@ -593,7 +617,7 @@ string checkLOGIN(char* ldap_username, char* ldap_password){
         sprintf(ldapBindUser, "uid=%s,ou=people,dc=technikum-wien,dc=at", rawLdapUser);
         printf("user set to: %s\n", ldapBindUser);
 
-/////////////////////////////////////////////////////////
+    /////////////////////////////////////////////////////////
 
     //// PW ////////////////////////////////////////////////
 // read password (bash: export ldappw=<yourPW>)
@@ -603,18 +627,7 @@ string checkLOGIN(char* ldap_username, char* ldap_password){
 
 /////////////////////////////////////////////////////////
 
-    // search settings
-  //  const char *ldapSearchBaseDomainComponent = "dc=technikum-wien,dc=at";
-   // char searchElement[20];
-   // sprintf(searchElement,"(uid=");
-   // strcat(searchElement,ldap_username);
-   // strcat(searchElement,")");
-   // const char *ldapSearchFilter = searchElement;
-   // ber_int_t ldapSearchScope = LDAP_SCOPE_SUBTREE;
-   // const char *ldapSearchResultAttributes[] = {"uid", "cn", NULL};
-
-    // general
-    int rc = 0; // return code
+int rc = 0; // return code
 
 
 
@@ -673,6 +686,7 @@ string checkLOGIN(char* ldap_username, char* ldap_password){
     {
         fprintf(stderr, "LDAP bind error: %s\n", ldap_err2string(rc));
         ldap_unbind_ext_s(ldapHandle, NULL, NULL);
+        loginCounter++;
         return "false";
     }else{
         ldap_unbind_ext_s(ldapHandle, NULL, NULL);
@@ -680,85 +694,75 @@ string checkLOGIN(char* ldap_username, char* ldap_password){
         username.append(ldap_username);
         return username;
     }
-
-/**
-    ////////////////////////////////////////////////////////////////////////////
-    /// perform ldap search
-
-    LDAPMessage *searchResult;
-    rc = ldap_search_ext_s(
-            ldapHandle,
-            ldapSearchBaseDomainComponent,
-            ldapSearchScope,
-            ldapSearchFilter,
-            (char **)ldapSearchResultAttributes,
-            0,
-            NULL,
-            NULL,
-            NULL,
-            500,
-            &searchResult);
-    if (rc != LDAP_SUCCESS)
-    {
-        fprintf(stderr, "LDAP search error: %s\n", ldap_err2string(rc));
-        ldap_unbind_ext_s(ldapHandle, NULL, NULL);
-        return -1;
-    }
-
-    printf("Total results: %d\n", ldap_count_entries(ldapHandle, searchResult));
-
-
-    ////////////////////////////////////////////////////////////////////////////
-    /// get result of search
-    LDAPMessage *searchResultEntry;
-    for (searchResultEntry = ldap_first_entry(ldapHandle, searchResult);
-         searchResultEntry != NULL;
-         searchResultEntry = ldap_next_entry(ldapHandle, searchResultEntry))
-    {
-        /////////////////////////////////////////////////////////////////////////
-
-        printf("DN: %s\n", ldap_get_dn(ldapHandle, searchResultEntry));
-
-        /////////////////////////////////////////////////////////////////////////
-        // Attributes
-        BerElement *ber;
-        char *searchResultEntryAttribute;
-        for (searchResultEntryAttribute = ldap_first_attribute(ldapHandle, searchResultEntry, &ber);
-             searchResultEntryAttribute != NULL;
-             searchResultEntryAttribute = ldap_next_attribute(ldapHandle, searchResultEntry, ber))
-        {
-            BerValue **vals;
-            if ((vals = ldap_get_values_len(ldapHandle, searchResultEntry, searchResultEntryAttribute)) != NULL)
-            {
-                for (int i = 0; i < ldap_count_values_len(vals); i++)
-                {
-                    printf("\t%s: %s\n", searchResultEntryAttribute, vals[i]->bv_val);
-                }
-                ldap_value_free_len(vals);
-            }
-
-            // free memory
-            ldap_memfree(searchResultEntryAttribute);
-        }
-        // free memory
-        if (ber != NULL)
-        {
-            ber_free(ber, 0);
-        }
-
-        printf("\n");
-    }
-
-    // free memory
-    ldap_msgfree(searchResult);
-
-    ldap_unbind_ext_s(ldapHandle, NULL, NULL);
-
-    return 0;
-
-    **/
 }
 
+//BLACKLIST
+int addToBlacklist(){
+    char Path[] = "./../data/";
+    createFolder(Path);
+    char blacklistPath[] = "./../data/blacklist/";
+    createFolder(blacklistPath);
+    strcat(blacklistPath,"blacklist.txt");
+    // ZEIT
+    time_t currentTime = time(NULL);
+
+    pthread_mutex_lock(&mutexLockBlacklist);
+
+    std::ofstream out;
+    out.open(blacklistPath, std::ofstream::app);
+    out << "" << currentTime;
+    out << "\n";
+    out << "" << currentIP;
+    out << "\n\n";
+    out.close();
+
+    pthread_mutex_unlock(&mutexLockBlacklist);
+    return 0;
+}
+int checkBlacklist()
+{
+    char blacklistPath[] = "./data/blacklist.txt";
+    char buffer[BUF];
+
+    FILE *filePtr1 = NULL;
+
+
+    pthread_mutex_lock(&mutexLockBlacklist);
+    filePtr1 = fopen(blacklistPath, "r");
+
+
+    if (filePtr1 == NULL)
+    {
+        filePtr1 = fopen(blacklistPath, "w");
+    }
+    else
+    {
+        while (!feof(filePtr1))
+        {
+            strcpy(buffer, "\0");
+            fgets(buffer, BUF, filePtr1);
+            if (!feof(filePtr1))
+            {
+                strcpy(buffer, "\0");
+                fgets(buffer, BUF, filePtr1);
+                if (strncmp(ipAddress, buffer, strlen(ipAddress)) == 0)
+                {
+                    fclose(filePtr1);
+                    pthread_mutex_unlock(&mutexLockBlacklist);
+                    return 1;
+                }
+            }
+        }
+    }
+
+
+
+
+
+    fclose(filePtr1);
+    pthread_mutex_unlock(&mutexLockBlacklist);
+    return 0;
+}
 // TOOLS
 void createMSG(char* path, char *sender, char *receiver, char *subject, std::string msg)
 {

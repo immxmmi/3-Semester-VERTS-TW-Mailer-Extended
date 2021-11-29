@@ -235,7 +235,6 @@ void LOGIN(char *buffer){
     std::cout << "Password: ";
     std::cin.getline(password,30);
     strcat(buffer,password);
-
 }
 void SEND(){
     char temp_msg[BUF];
