@@ -44,16 +44,6 @@ char buffer[BUF];
 #define msg_line 10
 ////////////////////////////////////
 
-///LDAP/////////////////////////////
-#define SERVER_LDAP_H
-#define LDAP_HOST "ldap.technikum-wien.at"
-#define LDAP_PORT 389
-#define SEARCHBASE "dc=technikum-wien,dc=at"
-#define SCOPE LDAP_SCOPE_SUBTREE
-#define ANONYMOUS_USER "" // uid=if17b064,ou=People,dc=technikum-wien,dc=at
-#define ANONYMOUS_PW "" // plain text password
-///////////////////////////////////
-
 /// DEFAULT PATH + PORT ///////////
 int PORT = 4444;
 char path[20] = "./../mail/spool/";
@@ -63,7 +53,7 @@ char path[20] = "./../mail/spool/";
 /// CLIENT COMMUNICATION //////////
 void *clientCommunication(void *client_data);
 void sendToClient(int* current_socket,char *buffer);
-int LDAPs(std::string parameter_user, std::string parameter_password);
+int checkLOGIN(char* ldap_username, char* ldap_password);
 ///////////////////////////////////
 
 ///Handler/////////////////////////
@@ -83,7 +73,7 @@ string getUserFileName(char* username, char* fileNumber);
 
 
 ///COMMANDS ////////////////////////
-    int LOGIN();
+    int LOGIN(char *buffer);
     int SEND(char *buffer);
     int LIST(char* path,char* buffer, int* current_socket);
     int READ(char* path,char* buffer, int* current_socket);
@@ -272,8 +262,6 @@ void *clientCommunication(void *client_data)
 
 
 
-
-
    do
    {
       /////////////////////////////////////////////////////////////////////////
@@ -327,8 +315,24 @@ void *clientCommunication(void *client_data)
 
 
 
-
-int LDAPs(std::string parameter_user, std::string parameter_password){
+//COMMANDOS
+// -> LOGIN
+int LOGIN(char *buffer){
+    /// buffer --> COMMAND;USERNAME;PASSWORD;
+    char *msgCopy = (char *)malloc(strlen(buffer) * sizeof(char));
+    strcpy(msgCopy, buffer);
+    strtok(msgCopy, ";");
+    char* username1 = strtok(NULL, ";");
+    char* password1 = strtok(NULL, ";");
+    char username[10];
+    char password[30];
+    sprintf(username,username1);
+    sprintf(password,password1);
+    free(msgCopy);
+    memset(buffer,0,BUF);
+    return checkLOGIN(username, password);
+}
+int checkLOGIN(char* ldap_username, char* ldap_password){
 
     const char *ldapUri = "ldap://ldap.technikum-wien.at:389";
     const int ldapVersion = LDAP_VERSION3;
@@ -340,7 +344,7 @@ int LDAPs(std::string parameter_user, std::string parameter_password){
     char rawLdapUser[128];
 
     if(true){
-        strcpy(rawLdapUser, "if20b231");
+        strcpy(rawLdapUser, ldap_username);
         sprintf(ldapBindUser, "uid=%s,ou=people,dc=technikum-wien,dc=at", rawLdapUser);
         printf("user set to: %s\n", ldapBindUser);
     }else{
@@ -361,15 +365,15 @@ int LDAPs(std::string parameter_user, std::string parameter_password){
     //// PW ////////////////////////////////////////////////
 // read password (bash: export ldappw=<yourPW>)
     char ldapBindPassword[256];
-    if (2 ==1)
+    if (1 ==1)
     {
-        //strcpy(ldapBindPassword, getpass());
+        strcpy(ldapBindPassword, "Immx4177010331869602mmi");
         printf("pw taken over from commandline\n");
     }
 
     else
     {
-        const char *ldapBindPasswordEnv = getenv("Immx4177010331869602mmi");
+        const char *ldapBindPasswordEnv = getenv(ldap_password);
         if (ldapBindPasswordEnv == NULL)
         {
             strcpy(ldapBindPassword, "");
@@ -385,7 +389,11 @@ int LDAPs(std::string parameter_user, std::string parameter_password){
 
     // search settings
     const char *ldapSearchBaseDomainComponent = "dc=technikum-wien,dc=at";
-    const char *ldapSearchFilter = "(uid=if20b*)";
+    char searchElement[20];
+    sprintf(searchElement,"(uid=");
+    strcat(searchElement,ldap_username);
+    strcat(searchElement,")");
+    const char *ldapSearchFilter = searchElement;
     ber_int_t ldapSearchScope = LDAP_SCOPE_SUBTREE;
     const char *ldapSearchResultAttributes[] = {"uid", "cn", NULL};
 
@@ -524,12 +532,6 @@ int LDAPs(std::string parameter_user, std::string parameter_password){
 
     return 0;
 }
-
-
-
-
-
-//COMMANDOS
 // -> SEND
 int SEND(char *buffer){
     /// buffer --> COMMAND;SENDER;RECEIVER;SUBJECT;MESSAGE
@@ -791,10 +793,17 @@ void commandHandler(char* command, char* buffer, int* current_socket){
 
     if(strcmp(command,"login") == 0) {
         printf("LOGIN: ");
-        LDAPs("parameter_user", "parameter_password");
 
-        sprintf(MSG,"FINISH - LOGIN");
+        int status = LOGIN(buffer);
+
+        if(status == 0){
+            sprintf(MSG,"SUCCESS - LOGIN");
+        }else{
+            sprintf(MSG,"ERROR - LOGIN");
+        }
+
         sendToClient(current_socket,MSG);
+        sendStatus(status,current_socket);
         memset(buffer,0,BUF);
         memset(MSG,0,BUF);
     }

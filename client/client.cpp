@@ -23,11 +23,13 @@ using namespace std;
 // SOCKET --> CLIENT
 int client_socket;
 char buffer[BUF];
+char username[10];
 
 void printBuffer(char *buff);
 void sendToServer(int current_client_socket);
 void LOGIN();
 void SEND();
+void LOGIN(char *buffer);
 void LIST(char *buffer);
 void DELETE(char *buffer);
 void READ(char *buffer);
@@ -35,7 +37,8 @@ void QUIT();
 
 
 //                [IP] [PORT]
-int main(int argc, char **argv){
+int main(int argc, char **argv)
+{
    int size;
 
 // MELDUNG WENN ZU WENIGE ARGUMENTE ÜBERGEBEN WERDEN
@@ -107,7 +110,9 @@ do{
          //////////////////////////////////////////////////////////////////////
    // SEND DATA
 
-          if(strcmp(buffer,"send;") == 0){
+          if(strcmp(buffer,"login;") == 0) {
+             LOGIN(buffer);
+          }else if(strcmp(buffer,"send;") == 0){
               SEND();
           }else if(strcmp(buffer,"list;") == 0){
               LIST(buffer);
@@ -216,7 +221,18 @@ string getNumber(){
 }
 
 
-void Login(){
+void LOGIN(char *buffer){
+    char username[10];
+    char password[30];
+    string text;
+    std::cout << "Username: ";
+    text = getUsername();
+    std::strcpy(username,text.c_str());
+    strcat(buffer,username);
+    strcat(buffer,";");
+    std::cout << "Password: ";
+    std::cin.getline(password,30);
+    strcat(buffer,password);
 
 }
 void SEND(){

@@ -1,5 +1,5 @@
 CC = g++
-CFLAGS = -std=c++17 -g -c -Wall -W
+CFLAGS = -std=c++17 -g -Wall -W
 LDAP = -lldap -llber
 
 all: ./client/client ./server/server
