@@ -173,7 +173,7 @@ void printBuffer(char *buff){
      printf("%s",strtok(NULL, ";"));
   }else{
         while(line != NULL){
-            printf(": %d: %s\n",line_counter,line);
+            printf(" %d: %s\n",line_counter,line);
             line = strtok(NULL, ";");
             if(line == NULL) {break;};
             line_counter++;

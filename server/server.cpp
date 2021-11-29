@@ -5,24 +5,19 @@
 #include <sys/stat.h>
 #include <sys/wait.h>
 #include <unistd.h>
-
 #include <stdlib.h>
 #include <stdio.h>
 #include <string.h>
-
 #include <signal.h>
 #include <pthread.h>
 #include <ldap.h>
 #include <lber.h>
-
 #include "server_error.h"
 #include <fstream>
 #include <filesystem>
 #include <iostream>
 #include <vector>
-
 #include <sstream>
-
 #include <time.h>
 
 
@@ -80,7 +75,7 @@ vector<string> getFileInput(std::string path, std::string file);
 void sendStatus(int status,int *current_socket);
 string getUserPath(char* root, char* username);
 string getUserFileName(char* username, char* fileNumber);
-int addToBlacklist();
+//int addToBlacklist();
 ///////////////////////////////////
 
 
@@ -99,8 +94,6 @@ int addToBlacklist();
 
 
 //        [PORT][MAIL-SPOOL-NAME]
-
-
 int main(int argc, char **argv)
 {
 
@@ -214,8 +207,9 @@ PORT = atoi(argv[1]);
    /// FORKEN -- VAR
     pid_t childPid; // KIND PROZESS
     static int childPidCounter = 0; // KIND PROZESS ZÄHLER
-    // //////////////////////////////////////////////////////////////////////////
-   while (!abortRequested) {
+    ////////////////////////////////////////////////////////////////////////////
+
+    while (!abortRequested) {
        ///CONNECTION////////////////////////////////////////////////////////////////
        printf("Waiting for connections...\n");
        ////////////////////////////////////////////////////////////////////////////
@@ -266,6 +260,7 @@ PORT = atoi(argv[1]);
            clientCommunication(&new_socket); /// und startet die Kommunikation mit dem Client
            new_socket = -1;
            exit(EXIT_SUCCESS);
+
        } else if (childPid == -1)  // FORK ERROR
        {
            perror("ERROR - FORK");
@@ -291,7 +286,6 @@ PORT = atoi(argv[1]);
 
 
 
-
 void *clientCommunication(void *client_data)
 {
    int size;
@@ -303,7 +297,6 @@ void *clientCommunication(void *client_data)
    strcpy(buffer, "Welcome to my First TW-Mailer!\r\nPlease enter your commands.... \r\n");
    sendToClient(current_socket,buffer); // sendet Buffer an Client
    ////////////////////////////////////////////////////////////////////////////
-
 
 
 
@@ -352,8 +345,6 @@ void *clientCommunication(void *client_data)
 
 
 
-
-
    } while (strcmp(buffer, "quit") != 0 && !abortRequested);
 
 
@@ -385,6 +376,7 @@ int SEND(char *buffer){
     char *msgCopy = (char *)malloc(strlen(buffer) * sizeof(char));
     strcpy(msgCopy, buffer);
     strtok(msgCopy, ";");
+
     char *sender = strtok(NULL, ";");
     char *receiver = strtok(NULL, ";");
     char *subject = strtok(NULL, ";");
@@ -402,10 +394,6 @@ int LIST(char* path,char* buffer,int* current_socket){
     strcpy(msgCopy, buffer);
     strtok(msgCopy, ";");
     char* username = strtok(NULL, ";");
-
-    //char currentPath[BUF];
-    //strcpy(currentPath,path);
-    //strcat(currentPath,username);
 
     int totalMSG = 0;
     fs::path p(getUserPath(path, username));
@@ -435,6 +423,9 @@ if(fs::exists(p) == true) {
         totalMSG++;
     }
 }
+
+
+
     if(is_empty == true){
         free(msgCopy);
         sprintf(buff,"ERROR - EMPTY FOLDER;");
@@ -443,9 +434,11 @@ if(fs::exists(p) == true) {
         return -1;
     }
 
-    //strcat(buff,";");
-    //strcat(buff, to_string(totalMSG).c_str());
-    fprintf(stderr,"ERROR_____ : %s",buff);
+    strcat(buff,";");
+    strcat(buff, "Total MSG        |--  ");
+    strcat(buff, to_string(totalMSG).c_str());
+    strcat(buff, "  --|  ");
+   // fprintf(stderr,"ERROR_____ : %s",buff);
     sendToClient(current_socket,buff);
 
 
@@ -517,7 +510,7 @@ int HELP(int *current_socket){
     strcat(buff,"| SEND: client sends a message to the server.         |;");
     strcat(buff,"| LIST: lists all messages of a specific user.        |;");
     strcat(buff,"| READ: display a specific message of a specific user.|;");
-    strcat(buff,"| DEL: removes a specific message.                    |;");
+    strcat(buff,"| DELETE: removes a specific message.                 |;");
     strcat(buff,"| QUIT: logout the client.                            |;");
     strcat(buff,"|-----------------------------------------------------|\n");
     sendToClient(current_socket,buff);
@@ -600,7 +593,7 @@ string checkLOGIN(char* ldap_username, char* ldap_password){
      //   return "false";
    // }
     if(loginCounter > 2){
-        addToBlacklist();
+      //  addToBlacklist();
         loginCounter = 0;
         return "false";
     }
@@ -697,6 +690,7 @@ int rc = 0; // return code
 }
 
 //BLACKLIST
+/**
 int addToBlacklist(){
     char Path[] = "./../data/";
     createFolder(Path);
@@ -719,8 +713,7 @@ int addToBlacklist(){
     pthread_mutex_unlock(&mutexLockBlacklist);
     return 0;
 }
-int checkBlacklist()
-{
+int checkBlacklist(){
     char blacklistPath[] = "./data/blacklist.txt";
     char buffer[BUF];
 
@@ -763,7 +756,10 @@ int checkBlacklist()
     pthread_mutex_unlock(&mutexLockBlacklist);
     return 0;
 }
-// TOOLS
+**/
+
+
+ // TOOLS
 void createMSG(char* path, char *sender, char *receiver, char *subject, std::string msg)
 {
     int counter = 0;
@@ -832,14 +828,12 @@ void commandHandler(char* command, char* buffer, int* current_socket){
         memset(MSG,0,BUF);
     }
 
-
-
     else if(strcmp(command,"send") == 0) {
         sendStatus(SEND(buffer),current_socket);
         //sprintf(MSG,"FINISH - SEND");
         //sendToClient(current_socket,MSG);
         memset(buffer,0,BUF);
-        memset(MSG,0,BUF);
+        //memset(MSG,0,BUF);
     }
 
     else if(strcmp(command,"list") == 0){
@@ -929,6 +923,7 @@ void sendToClient(int* current_socket,char *buffer){
     // ENTFERNEN \r und \n
     if (buffer[size - 2] == '\r' && buffer[size - 1] == '\n'){size -= 2;buffer[size] = 0;}
     else if (buffer[size - 1] == '\n'){--size;buffer[size] = 0;}
+
     if ((send(*current_socket, buffer, strlen(buffer), 0)) == -1){perror("send error");} // SENDET AN CLIENT
     memset(buffer,0,BUF); // LEERT DEN BUFFER
 }
