@@ -304,9 +304,15 @@ void *clientCommunication(void *client_data)
        ///                            CLIENT-SESSION                           ////
        ////////////////////////////////////////////////////////////////////////////
 
+
+       //LDAP SERVER
+       // CONNECT - SETUP
+
+
+
+
        // Handler
       commandHandler(getCommand(buffer),buffer, current_socket);
-
 
 
        ////////////////////////////////////////////////////////////////////////////
@@ -593,7 +599,7 @@ void commandHandler(char* command, char* buffer, int* current_socket){
 
     else if(strcmp(command,"list") == 0){
         printf("LIST: ");
-        sendStatus(LIST(path,buffer,current_socket));
+        sendStatus(LIST(path,buffer,current_socket),current_socket);
         memset(buffer,0,BUF);
     }
 
