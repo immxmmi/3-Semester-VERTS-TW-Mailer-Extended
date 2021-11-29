@@ -1,5 +1,6 @@
 CC = g++
-CFLAGS = -std=c++17 -g -Wall -W
+CFLAGS = -std=c++17 -g -c -Wall -W
+LDAP = -lldap -llber
 
 all: ./client/client ./server/server
 
@@ -7,7 +8,7 @@ all: ./client/client ./server/server
 
 ./server/server: ./server/server.cpp
 	mkdir -p ./mail
-	$(CC) $(CFLAGS) ./server/server.cpp -o ./bin/server
+	$(CC) $(CFLAGS) ./server/server.cpp -o ./bin/server $(LDAP)
 
 ./client/client: ./client/client.cpp
 	$(CC) $(CFLAGS) ./client/client.cpp -o ./bin/client
