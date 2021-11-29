@@ -23,7 +23,7 @@ using namespace std;
 // SOCKET --> CLIENT
 int client_socket;
 char buffer[BUF];
-char username[10];
+char* username;
 
 void printBuffer(char *buff);
 void sendToServer(int current_client_socket);
@@ -167,15 +167,17 @@ void printBuffer(char *buff){
     int line_counter = 0;
     strcpy(currentBuffer, buff);
     line = strtok(currentBuffer, ";");
-
-    while(line != NULL){
-        printf("%d: %s\n",line_counter,line);
-        line = strtok(NULL, ";");
-        line_counter++;
+    if(strcmp(line,"AUTH") == 0){
+        username = strtok(NULL, ";");
+        printf("%s",strtok(NULL, ";"));
+    }else{
+        while(line != NULL){
+            printf("%d: %s\n",line_counter,line);
+            line = strtok(NULL, ";");
+            line_counter++;
+        }
     }
-
 }
-
 
 string getUsername(){
     string text;
@@ -198,7 +200,6 @@ string getUsername(){
 
     return text;
 }
-
 string getNumber(){
     string text;
     bool check = true;
@@ -220,7 +221,6 @@ string getNumber(){
     return text;
 }
 
-
 void LOGIN(char *buffer){
     char username[10];
     char password[30];
@@ -236,16 +236,22 @@ void LOGIN(char *buffer){
 
 }
 void SEND(){
-
     char temp_msg[BUF];
     string text;
     //std::strcat(buffer,"send");
+   if(username == NULL){
     std::cout << "SENDER: ";
+
     text = getUsername();
     std::strcpy(temp_msg,text.c_str());
 
     std::strcat(buffer,temp_msg);
+   }else{
+       std::strcat(buffer,username);
+   }
     std::strcat(buffer,";");
+
+
     std::cout << "Receiver: ";
 
     text = getUsername();
