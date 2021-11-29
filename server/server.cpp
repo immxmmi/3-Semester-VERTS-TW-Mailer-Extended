@@ -41,7 +41,7 @@ using std::ifstream; using std::vector;
 int server_socket = -1;
 int new_socket = -1;
 int abortRequested = 0;
-char buffer[BUF];
+char buffer[BUF] = "";
 ////////////////////////////////////
 
 /// DOCUMENT ZEILEN/////////////////
@@ -391,13 +391,12 @@ int LIST(char* path,char* buffer,int* current_socket){
     //strcpy(currentPath,path);
     //strcat(currentPath,username);
 
-
+    int totalMSG = 0;
     fs::path p(getUserPath(path, username));
 
     char buff[BUF];
     int size =0;
     bool is_empty = true;
-
 if(fs::exists(p) == true) {
     string currentFilename = "";
     for (const auto &file: directory_iterator(getUserPath(path, username))) {
@@ -417,6 +416,7 @@ if(fs::exists(p) == true) {
             --size;
             buff[size] = 0;
         }
+        totalMSG++;
     }
 }
     if(is_empty == true){
@@ -426,7 +426,13 @@ if(fs::exists(p) == true) {
         memset(buffer,0,BUF);
         return -1;
     }
+
+    //strcat(buff,";");
+    //strcat(buff, to_string(totalMSG).c_str());
+    fprintf(stderr,"ERROR_____ : %s",buff);
     sendToClient(current_socket,buff);
+
+
     free(msgCopy);
     memset(buffer,0,BUF);
     return 0;
@@ -785,7 +791,7 @@ void createMSG(char* path, char *sender, char *receiver, char *subject, std::str
 
 
     strcat(full_path, fileName);
-    std::cout << full_path;
+   // std::cout << full_path;
     std::ofstream out;
     out.open(full_path, std::ofstream::app);
     out << "\n\nSENDER:\n" << sender;
@@ -800,7 +806,7 @@ void createFolder(char *path){
 
 // HANDLER + COMMUNICATION
 void commandHandler(char* command, char* buffer, int* current_socket){
-    char MSG [BUF];
+    char MSG [BUF] = "";
 
     if(strcmp(command,"login") == 0) {
         printf("LOGIN: ");
@@ -825,34 +831,33 @@ void commandHandler(char* command, char* buffer, int* current_socket){
 
 
     else if(strcmp(command,"send") == 0) {
-        printf("SEND: ");
-        SEND(buffer);
-        sprintf(MSG,"FINISH - SEND");
-        sendToClient(current_socket,MSG);
+        sendStatus(SEND(buffer),current_socket);
+        //sprintf(MSG,"FINISH - SEND");
+        //sendToClient(current_socket,MSG);
         memset(buffer,0,BUF);
         memset(MSG,0,BUF);
     }
 
     else if(strcmp(command,"list") == 0){
         printf("LIST: ");
-        sendStatus(LIST(path,buffer,current_socket),current_socket);
+        LIST(path,buffer,current_socket);
         memset(buffer,0,BUF);
     }
 
     else if(strcmp(command,"read") == 0){
             printf("READ: ");
-            sendStatus(READ(path,buffer, current_socket),current_socket);
+            READ(path,buffer, current_socket);
             memset(buffer,0,BUF);
         }
 
     else if(strcmp(command,"delete") == 0){
         printf("DELETE: ");
-        sendStatus(DELETE(path,buffer,current_socket),current_socket);
+        DELETE(path,buffer,current_socket);
         memset(buffer,0,BUF);
     }
 
     else if(strcmp(command,"help") == 0){
-        sendStatus(HELP(current_socket),current_socket);
+        HELP(current_socket);
         memset(buffer,0,BUF);
     }
 
@@ -867,10 +872,10 @@ void commandHandler(char* command, char* buffer, int* current_socket){
     else {
         strcpy(MSG,"|ERROR - COMMAND NOT FOUND!;");
         sendToClient(current_socket,MSG);
-        memset(MSG,0,BUF);
-        HELP(current_socket);
-        sendStatus(-1,current_socket);
+        //HELP(current_socket);
+       // sendStatus(-1,current_socket);
         memset(buffer,0,BUF);
+       memset(MSG,0,BUF);
 
     }
     memset(buffer, 0, BUF);

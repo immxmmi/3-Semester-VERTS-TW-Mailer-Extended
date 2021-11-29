@@ -42,7 +42,7 @@ int main(int argc, char **argv)
    int size;
 
 // MELDUNG WENN ZU WENIGE ARGUMENTE ÜBERGEBEN WERDEN
-   if (argc < 2 || atoi(argv[1]) == 0){fprintf(stderr, "\nUsage: ./client <ip> <port>\n");return EXIT_FAILURE;}
+   if (argc < 2 || atoi(argv[2]) == 0){fprintf(stderr, "\nUsage: ./client <ip> <port>\n");return EXIT_FAILURE;}
 //PORT --> [PORT]
    int PORT = atoi(argv[2]);
   // int IP = atoi(argv[1]);
@@ -167,16 +167,18 @@ void printBuffer(char *buff){
     int line_counter = 0;
     strcpy(currentBuffer, buff);
     line = strtok(currentBuffer, ";");
-    if(strcmp(line,"AUTH") == 0){
-        username = strtok(NULL, ";");
-        printf("%s",strtok(NULL, ";"));
-    }else{
+
+  if(strcmp(line,"AUTH") == 0){
+     username = strtok(NULL, ";");
+     printf("%s",strtok(NULL, ";"));
+  }else{
         while(line != NULL){
-            printf("%d: %s\n",line_counter,line);
+            printf(": %d: %s\n",line_counter,line);
             line = strtok(NULL, ";");
+            if(line == NULL) {break;};
             line_counter++;
         }
-    }
+ }
 }
 
 string getUsername(){
@@ -306,7 +308,6 @@ void DELETE(char *buffer){
     char username[10];
     char number[4];
     string text;
-
     std::cout << "Username: ";
     text = getUsername();
     std::strcpy(username,text.c_str());
