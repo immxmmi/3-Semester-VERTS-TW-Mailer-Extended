@@ -610,7 +610,7 @@ string checkLOGIN(char* ldap_username, char* ldap_password){
 
     if(check!= 0){
         printf("\n CHECK :: %d\n",check);
-        updateBlackList(check);
+       // updateBlackList(check);
         return "false";
     }
 
@@ -796,11 +796,11 @@ void deleteLine(int lineNumber){
 int updateBlackList(int lineNumber){
     string time = getTime(lineNumber);
 
-    if(time == ){
+   // if(time == ){
         deleteLine(lineNumber);
         deleteLine(lineNumber);
 
-    }
+    //}
 
     return 0;
 }

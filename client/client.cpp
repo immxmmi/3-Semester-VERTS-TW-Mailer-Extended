@@ -174,11 +174,16 @@ void sendToServer(char* buffer){
 void respHandler(char *buff){
     char *currentBuffer = (char *)malloc(strlen(buff) * sizeof(char));
     char *line;
+    char* currentUsername = NULL;
     strcpy(currentBuffer, buff);
     line = strtok(currentBuffer, ";");
 
   if(strcmp(line,"AUTH") == 0){
-     username = strtok(NULL, ";");
+      currentUsername = strtok(NULL, ";");
+      if(strcmp(currentUsername,"false")!=0){
+          username = currentUsername;
+      }
+
      printf("%s",strtok(NULL, ";"));
 
   }else if(strcmp(line,"LIST")==0){
