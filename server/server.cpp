@@ -61,6 +61,7 @@ int addToBlacklist();
 int checkBlacklist();
 int updateBlackList(int lineNumber);
 string getTime(int lineNumber);
+void deleteLine(int lineNumber);
 ///////////////////////////////////
 
 /// CLIENT COMMUNICATION //////////
@@ -608,12 +609,12 @@ string checkLOGIN(char* ldap_username, char* ldap_password){
     int check = checkBlacklist();
 
     if(check!= 0){
-        //printf("\n CHECK :: %d\n",check);
+        printf("\n CHECK :: %d\n",check);
         updateBlackList(check);
         return "false";
     }
 
-    if(loginCounter > 2){
+    if(loginCounter > 1){
         addToBlacklist();
         loginCounter = 0;
         return "false";
@@ -759,38 +760,47 @@ string getTime(int lineNumber){
     return time;
 }
 
-void deleteLine(){
-    string time ="";
+void deleteLine(int lineNumber){
     int currentLineNumber = 1;
-    std::ifstream in("../data/blacklist/blacklist.txt");
+    string filename = "../data/blacklist/blacklist.txt";
+    std::ifstream in(filename);
     pthread_mutex_lock(&mutexLockBlacklist);
 
-    if (in.is_open()){
-        std::string line;
-        while(std::getline(in,line)){
+    std::string line;
+    std::vector<string>new_blacklist;
 
-            if(currentLineNumber == lineNumber){
-
-     
-
-                pthread_mutex_unlock(&mutexLockBlacklist);
-               // return line;
+    if (in.is_open()) {
+        while (getline(in, line)) {
+        if (currentLineNumber != lineNumber) {
+                new_blacklist.push_back(line);
             }
             currentLineNumber ++;
         }
-        in.close();
     }
 
+    in.close();
+
+    std::ofstream out;
+    out.open(filename, std::ofstream::trunc);
+    for( string i : new_blacklist){
+        out << i << std::endl;
+    }
+    out.close();
+
+
     pthread_mutex_unlock(&mutexLockBlacklist);
-    return time;
+   // return time;
 }
 
 
 int updateBlackList(int lineNumber){
     string time = getTime(lineNumber);
 
+    if(time == ){
+        deleteLine(lineNumber);
+        deleteLine(lineNumber);
 
-
+    }
 
     return 0;
 }
