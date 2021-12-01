@@ -162,7 +162,12 @@ do{
 
 
 
-/// TOOLS ////////////////////////////////////
+/// CLIENT ////////////////////////////////////
+void clearBUFF(){
+    int size = strlen(buffer);
+    if (buffer[size - 2] == '\r' && buffer[size - 1] == '\n'){size -= 2;buffer[size] = 0;}
+    else if (buffer[size - 1] == '\n'){--size;buffer[size] = 0;}
+}
 void sendToServer(char* buffer){
     int size = strlen(buffer);
     if(size <=0){
@@ -226,7 +231,7 @@ void commandHandler(){
 }
 //////////////////////////////////////////////
 
-/// Getter ///////////////////////////////////
+/// PRINT ///////////////////////////////////
 void printMsgList(list<string> MSG) {
     MSG.sort();
     int size = MSG.size();
@@ -296,12 +301,9 @@ void printMSG(char *line){
 
 
 }
+//////////////////////////////////////////////
 
-void clearBUFF(){
-    int size = strlen(buffer);
-    if (buffer[size - 2] == '\r' && buffer[size - 1] == '\n'){size -= 2;buffer[size] = 0;}
-    else if (buffer[size - 1] == '\n'){--size;buffer[size] = 0;}
-}
+/// Getter ///////////////////////////////////
 string getUsername(){
     string text;
     bool check = true;
@@ -470,7 +472,6 @@ void DELETE(char *buffer){
 }
 // -> QUIT
 void QUIT(){
-////////////////////////////////////////////////////////////////////////////
     // CLOSES THE DESCRIPTOR
     if (client_socket != -1)
     {
