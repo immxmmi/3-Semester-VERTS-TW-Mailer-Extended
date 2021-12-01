@@ -59,6 +59,8 @@ char blacklistPath[] = "./../data/blacklist/";
 string blackListFileName = "../data/blacklist/blacklist.txt";
 int addToBlacklist();
 int checkBlacklist();
+int updateBlackList(int lineNumber);
+string getTime(int lineNumber);
 ///////////////////////////////////
 
 /// CLIENT COMMUNICATION //////////
@@ -603,8 +605,12 @@ string getUserFileName(char* username, char* fileNumber){
 //LDAP
 string checkLOGIN(char* ldap_username, char* ldap_password){
 
-    if(checkBlacklist() == -1){
-       return "false";
+    int check = checkBlacklist();
+
+    if(check!= 0){
+        //printf("\n CHECK :: %d\n",check);
+        updateBlackList(check);
+        return "false";
     }
 
     if(loginCounter > 2){
@@ -730,72 +736,88 @@ int addToBlacklist(){
     return 0;
 }
 
-
-int checkBlacklist(){
+string getTime(int lineNumber){
+    string time ="";
+    int currentLineNumber = 1;
     std::ifstream in("../data/blacklist/blacklist.txt");
-   // std::ifstream in("../data/blacklist/blacklist.txt");
+    pthread_mutex_lock(&mutexLockBlacklist);
+
     if (in.is_open()){
         std::string line;
         while(std::getline(in,line)){
-            if(strcmp(currentIP.c_str(),line.c_str())==0){
-                std:: cout << "\nIP : " << line << " BLOCKED\n";
-                return -1;
+
+            if(currentLineNumber == lineNumber){
+                 pthread_mutex_unlock(&mutexLockBlacklist);
+                return line;
             }
+           currentLineNumber ++;
         }
         in.close();
     }
-        return 0;
+
+    pthread_mutex_unlock(&mutexLockBlacklist);
+    return time;
 }
 
-/**
-int checkBlacklist(){
-    char blacklistPath[] = "./data/blacklist.txt";
-    char buffer[BUF];
-
-    FILE *filePtr1 = NULL;
-
-
+void deleteLine(){
+    string time ="";
+    int currentLineNumber = 1;
+    std::ifstream in("../data/blacklist/blacklist.txt");
     pthread_mutex_lock(&mutexLockBlacklist);
 
-    filePtr1 = fopen(blacklistPath, "r");
+    if (in.is_open()){
+        std::string line;
+        while(std::getline(in,line)){
 
+            if(currentLineNumber == lineNumber){
 
-    if (filePtr1 == NULL)
-    {
-        filePtr1 = fopen(blacklistPath, "w");
-    }
+     
 
-    else
-    {
-        while (!feof(filePtr1))
-        {
-            strcpy(buffer, "\0");
-            fgets(buffer, BUF, filePtr1);
-            if (!feof(filePtr1))
-            {
-                strcpy(buffer, "\0");
-                fgets(buffer, BUF, filePtr1);
-
-                if (strncmp(ipAddress, buffer, strlen(ipAddress)) == 0)
-                {
-                    fclose(filePtr1);
-                    pthread_mutex_unlock(&mutexLockBlacklist);
-                    return 1;
-                }
-
-
+                pthread_mutex_unlock(&mutexLockBlacklist);
+               // return line;
             }
+            currentLineNumber ++;
         }
+        in.close();
     }
 
-
-    fclose(filePtr1);
     pthread_mutex_unlock(&mutexLockBlacklist);
+    return time;
+}
+
+
+int updateBlackList(int lineNumber){
+    string time = getTime(lineNumber);
+
+
+
+
     return 0;
 }
 
 
-**/
+int checkBlacklist(){
+    int fileNumber = 0;
+    std::ifstream in("../data/blacklist/blacklist.txt");
+
+    pthread_mutex_lock(&mutexLockBlacklist);
+    if (in.is_open()){
+        std::string line;
+        while(std::getline(in,line)){
+            if(strcmp(currentIP.c_str(),line.c_str())==0){
+                std:: cout << "\nIP : " << line << " BLOCKED";
+                std:: cout << "\nLINE NUMBER - TIME: " << fileNumber << "\n";
+                pthread_mutex_unlock(&mutexLockBlacklist);
+                return fileNumber;
+            }
+            fileNumber ++;
+        }
+        in.close();
+    }
+        pthread_mutex_unlock(&mutexLockBlacklist);
+        return 0;
+}
+
 
  // TOOLS
 void createMSG(char* path, char *sender, char *receiver, char *subject, std::string msg)
