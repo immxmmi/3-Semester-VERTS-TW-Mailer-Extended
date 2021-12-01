@@ -69,7 +69,7 @@ char* getCommand(char* buffer);
 ///////////////////////////////////
 
 /// TOOLS /////////////////////////
-void createMSG(char *path, char *sender, char *receiver, char *subject, char* msg);
+void createMSG(char *path, char *sender, char *receiver, char *subject, std::string msg);
 void createFolder(char *path);
 vector<string> getFileInput(std::string path, std::string file);
 void sendStatus(int status,int *current_socket);
@@ -373,16 +373,31 @@ int SEND(char *buffer){
     /// buffer --> COMMAND;SENDER;RECEIVER;SUBJECT;MESSAGE
     char *msgCopy = (char *)malloc(strlen(buffer) * sizeof(char));
     strcpy(msgCopy, buffer);
-    strtok(msgCopy, ";");
-    char *sender = strtok(NULL, ";");
-    char *receiver = strtok(NULL, ";");
-    char *subject = strtok(NULL, ";");
 
-    createMSG(path, sender, receiver, subject, msgCopy);
+    char *line;
+
+    line = strtok(msgCopy, ";");
+    line = strtok(NULL, ";");
+    char *sender = line;
+    line = strtok(NULL, ";");
+    char *receiver = line;
+    line = strtok(NULL, ";");
+    char *subject = line;
+
+    string msg;
+        line = strtok(NULL, ";");
+    while(line != NULL) {
+        msg.append(line);
+        msg.append("\n");
+        line = strtok(NULL, ";");
+    }
+
+    createMSG(path, sender, receiver, subject, msg);
     free(msgCopy);
     memset(buffer,0,BUF);
     return 0;
 }
+
 // -> LIST
 int LIST(char* path,char* buffer,int* current_socket){
     /// buffer --> COMMAND;USERNAME;
@@ -461,10 +476,10 @@ int READ(char* path,char* buffer, int* current_socket){
         memset(buff,0,BUF);
         return -1;
     }else{
-        strcat(buff,"READ;");
+      //  strcat(buff,"READ;");
         for (const auto &i : lines){
-            strcat(buff, i.c_str());
             strcat(buff, ";");
+            strcat(buff, i.c_str());
         }
     }
     sendToClient(current_socket,buff);
@@ -755,7 +770,7 @@ int checkBlacklist(){
 
 
  // TOOLS
-void createMSG(char* path, char *sender, char *receiver, char *subject, char* msg)
+void createMSG(char* path, char *sender, char *receiver, char *subject, std::string msg)
 {
     int counter = 0;
     char number [4];
@@ -792,12 +807,7 @@ void createMSG(char* path, char *sender, char *receiver, char *subject, char* ms
     out << "\n\nSENDER:\n" << sender;
     out << "\n\nBETREFF:\n" << subject;
     out << "\n\n\nNACHRICHT:\n";
-    out <<  strtok(msg, ";");
-    do{
-
-             out <<  strtok(NULL, ";");
-            if(msg == NULL) {break;};
-    }while(msg != NULL);
+    out <<  msg;
     out.close();
 }
 void createFolder(char *path){
@@ -921,10 +931,9 @@ void signalHandler(int sig)
 }
 void sendToClient(int* current_socket,char *buffer){
     int size = strlen(buffer);
-    // ENTFERNEN \r und \n
+     //ENTFERNEN \r und \n
     if (buffer[size - 2] == '\r' && buffer[size - 1] == '\n'){size -= 2;buffer[size] = 0;}
     else if (buffer[size - 1] == '\n'){--size;buffer[size] = 0;}
-
     if ((send(*current_socket, buffer, strlen(buffer), 0)) == -1){perror("send error");} // SENDET AN CLIENT
     memset(buffer,0,BUF); // LEERT DEN BUFFER
 }

@@ -184,7 +184,7 @@ void respHandler(char *buff){
 
   }else if(strcmp(line,"LIST")==0){
       getMsgList(line);
-  }else if(strcmp(line,"READ")==0){
+  }else if(strcmp(line,"READs")==0){
       printMSG(line);
 
     }else{
@@ -193,8 +193,8 @@ void respHandler(char *buff){
           line = strtok(NULL, ";");
           if(line == NULL) {break;};
       }
+     // printf("%s\n",line);
   }
-
 
 }
 void commandHandler(){
@@ -259,6 +259,7 @@ void getMsgList(char *line){
 
 
 void printMSG(char *line){
+
     // ERSTES ELEMENT IGNORE
     line = strtok(NULL, ";");
     string currentMSG = "";
@@ -266,6 +267,7 @@ void printMSG(char *line){
     std::cout << "\n|                  MSG                   |";
     std::cout << "\n|________________________________________|";
   //std::cout << "|                                        |\n";
+
     if(line != NULL) {
         //SENDER
         std::cout << "\n ________________________________________";
@@ -282,7 +284,8 @@ void printMSG(char *line){
         line = strtok(NULL, ";");
 
         std::cout << "\n _______________________________________";
-        std::cout << "\n|   " << line << "\n";line = strtok(NULL, ";");
+        std::cout << "\n|   " << line << "\n";
+        line = strtok(NULL, ";");
         std::cout << "    " << line;
 
 
@@ -420,11 +423,6 @@ void SEND(){
              std::strcat(buffer,delimiter.c_str());
             }
         }while((strcmp(end_buffer,end.c_str())!=0));
-
-      //  if(strlen(temp_msg)>0){break;};
-
-
-    //std::strcat(buffer,temp_msg);
 
 }
 // -> LIST
