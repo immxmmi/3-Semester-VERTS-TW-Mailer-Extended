@@ -107,7 +107,7 @@ int main(int argc, char **argv)
 ////////////////////////////////////////////////////////////////////////////
 ///ARGUMENT ///////////////////////////////////////////////////////////////
    if (argc < 3 || atoi(argv[1]) == 0){
-      fprintf(stderr, "\nUsage: ./server <PORT> <mail-spool-name>\n");
+      fprintf(stderr, "\nUsage: ./server <port> <mail-spool-name>\n");
       return EXIT_FAILURE;
    }
 ////////////////////////////////////////////////////////////////////////////
@@ -527,6 +527,7 @@ int HELP(int *current_socket){
     strcpy(buff,"|-----------------------------------------------------|;");
     strcat(buff,"|-----------------        HELP       -----------------|;");
     strcat(buff,"|-----------------------------------------------------|;");
+    strcat(buff,"| LOGIN: LDAP-SERVER FH-TECHNIKUM LOGIN.              |;");
     strcat(buff,"| SEND: client sends a message to the server.         |;");
     strcat(buff,"| LIST: lists all messages of a specific user.        |;");
     strcat(buff,"| READ: display a specific message of a specific user.|;");
@@ -606,6 +607,7 @@ string getUserFileName(char* username, char* fileNumber){
 //LDAP
 string checkLOGIN(char* ldap_username, char* ldap_password){
 
+    std::cout<< loginCounter << endl;
     int check = checkBlacklist();
 
     if(check!= 0){
@@ -614,7 +616,7 @@ string checkLOGIN(char* ldap_username, char* ldap_password){
        }
     }
 
-    if(loginCounter > 1){
+    if(loginCounter > 2){
         addToBlacklist();
         loginCounter = 0;
         return "false";

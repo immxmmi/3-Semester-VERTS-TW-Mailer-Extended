@@ -4,11 +4,8 @@ SENDER:
 if20b231
 
 BETREFF:
-wohnt
+test-text
 
 
 NACHRICHT:
-in
-wien
-s.d
-ddddddddddddd.
+Das ist ein Test-Text.

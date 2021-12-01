@@ -1,13 +1,15 @@
 
 
 SENDER:
-false
+if20b231
 
 BETREFF:
-a
+test2
 
 
 NACHRICHT:
-a
-a
-a.
+ls
+s
+s
+s
+s.

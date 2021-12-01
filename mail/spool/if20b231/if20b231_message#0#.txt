@@ -1,0 +1,12 @@
+
+
+SENDER:
+if20b231
+
+BETREFF:
+eigene Email versendet
+
+
+NACHRICHT:
+Ich sende mir selbst Emails
+um zu testen.
