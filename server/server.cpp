@@ -69,7 +69,7 @@ char* getCommand(char* buffer);
 ///////////////////////////////////
 
 /// TOOLS /////////////////////////
-void createMSG(char *path, char *sender, char *receiver, char *subject, std::string msg);
+void createMSG(char *path, char *sender, char *receiver, char *subject, char* msg);
 void createFolder(char *path);
 vector<string> getFileInput(std::string path, std::string file);
 void sendStatus(int status,int *current_socket);
@@ -343,8 +343,6 @@ void *clientCommunication(void *client_data)
        ////////////////////////////////////////////////////////////////////////////
 
 
-
-
    } while (strcmp(buffer, "quit") != 0 && !abortRequested);
 
 
@@ -376,13 +374,11 @@ int SEND(char *buffer){
     char *msgCopy = (char *)malloc(strlen(buffer) * sizeof(char));
     strcpy(msgCopy, buffer);
     strtok(msgCopy, ";");
-
     char *sender = strtok(NULL, ";");
     char *receiver = strtok(NULL, ";");
     char *subject = strtok(NULL, ";");
-    char *msg = strtok(NULL, ";");
 
-    createMSG(path, sender, receiver, subject, msg);
+    createMSG(path, sender, receiver, subject, msgCopy);
     free(msgCopy);
     memset(buffer,0,BUF);
     return 0;
@@ -394,21 +390,30 @@ int LIST(char* path,char* buffer,int* current_socket){
     strcpy(msgCopy, buffer);
     strtok(msgCopy, ";");
     char* username = strtok(NULL, ";");
-
-    int totalMSG = 0;
     fs::path p(getUserPath(path, username));
-
     char buff[BUF] = "";
+    strcat(buff,"LIST;");
     int size =0;
     bool is_empty = true;
+
+
 if(fs::exists(p) == true) {
     string currentFilename = "";
+    string fileNumber = "";
+    char* fileNameToChar = NULL;
     for (const auto &file: directory_iterator(getUserPath(path, username))) {
         is_empty = false;
         currentFilename = file.path().filename();
         string filename = currentFilename;
+        fileNameToChar = strdup(filename.c_str());
+        strtok(fileNameToChar, "#");
+        fileNumber = strtok(NULL, "#");
+
         string path = file.path().parent_path();
         path.append("/");
+
+        strcat(buff,fileNumber.c_str());
+        strcat(buff,": ");
         strcat(buff, getFileInput(path, currentFilename).at(subject_line).c_str());
         strcat(buff, ";");
         size = strlen(buff);
@@ -420,10 +425,8 @@ if(fs::exists(p) == true) {
             --size;
             buff[size] = 0;
         }
-        totalMSG++;
     }
 }
-
 
 
     if(is_empty == true){
@@ -434,14 +437,7 @@ if(fs::exists(p) == true) {
         return -1;
     }
 
-    strcat(buff,";");
-    strcat(buff, "Total MSG        |--  ");
-    strcat(buff, to_string(totalMSG).c_str());
-    strcat(buff, "  --|  ");
-   // fprintf(stderr,"ERROR_____ : %s",buff);
     sendToClient(current_socket,buff);
-
-
     free(msgCopy);
     memset(buffer,0,BUF);
     return 0;
@@ -464,7 +460,9 @@ int READ(char* path,char* buffer, int* current_socket){
         free(msgCopy);
         memset(buff,0,BUF);
         return -1;
-    }else{for (const auto &i : lines){
+    }else{
+        strcat(buff,"READ;");
+        for (const auto &i : lines){
             strcat(buff, i.c_str());
             strcat(buff, ";");
         }
@@ -563,9 +561,6 @@ vector<string> getFileInput(std::string path, std::string file){
         lines.push_back(line);
     }
 
-    //   for (const auto &i : lines)
-    //      cout << i << endl;
-
     input_file.close();
 
     return lines;
@@ -582,7 +577,7 @@ string getUserFileName(char* username, char* fileNumber){
     fileName.append(username);
     fileName.append("_message#");
     fileName.append(fileNumber);
-    fileName.append(".txt");
+    fileName.append("#.txt");
     return fileName;
 }
 
@@ -760,7 +755,7 @@ int checkBlacklist(){
 
 
  // TOOLS
-void createMSG(char* path, char *sender, char *receiver, char *subject, std::string msg)
+void createMSG(char* path, char *sender, char *receiver, char *subject, char* msg)
 {
     int counter = 0;
     char number [4];
@@ -782,7 +777,7 @@ void createMSG(char* path, char *sender, char *receiver, char *subject, std::str
         strcat(fileName, "_message#");
         sprintf(number,"%d",counter);
         strcat(fileName, number); // Counter
-        strcat(fileName, ".txt"); // Data name
+        strcat(fileName, "#.txt"); // Data name
         strcat(current_path, fileName); // Data name
         fs::path p(current_path);
         if(!(fs::exists(p))){break;}
@@ -796,7 +791,13 @@ void createMSG(char* path, char *sender, char *receiver, char *subject, std::str
     out.open(full_path, std::ofstream::app);
     out << "\n\nSENDER:\n" << sender;
     out << "\n\nBETREFF:\n" << subject;
-    out << "\n\n\nNACHRICHT:\n" << msg;
+    out << "\n\n\nNACHRICHT:\n";
+    out <<  strtok(msg, ";");
+    do{
+
+             out <<  strtok(NULL, ";");
+            if(msg == NULL) {break;};
+    }while(msg != NULL);
     out.close();
 }
 void createFolder(char *path){
