@@ -38,6 +38,7 @@ int new_socket = -1;
 int abortRequested = 0;
 int loginCounter = 0;
 char buffer[BUF] = "";
+string delimiter (";");
 ////////////////////////////////////
 
 /// DOCUMENT ZEILEN/////////////////
@@ -54,6 +55,10 @@ string currentIP="";
 
 /// BLACK LIST ////////////////////
 pthread_mutex_t mutexLockBlacklist;
+char blacklistPath[] = "./../data/blacklist/";
+string blackListFileName = "../data/blacklist/blacklist.txt";
+int addToBlacklist();
+int checkBlacklist();
 ///////////////////////////////////
 
 /// CLIENT COMMUNICATION //////////
@@ -75,7 +80,6 @@ vector<string> getFileInput(std::string path, std::string file);
 void sendStatus(int status,int *current_socket);
 string getUserPath(char* root, char* username);
 string getUserFileName(char* username, char* fileNumber);
-//int addToBlacklist();
 ///////////////////////////////////
 
 
@@ -357,9 +361,9 @@ string LOGIN(char *buffer){
     /// buffer --> COMMAND;USERNAME;PASSWORD;
     char *msgCopy = (char *)malloc(strlen(buffer) * sizeof(char));
     strcpy(msgCopy, buffer);
-    strtok(msgCopy, ";");
-    char* username1 = strtok(NULL, ";");
-    char* password1 = strtok(NULL, ";");
+    strtok(msgCopy, delimiter.c_str());
+    char* username1 = strtok(NULL, delimiter.c_str());
+    char* password1 = strtok(NULL, delimiter.c_str());
     char username[10];
     char password[30];
     sprintf(username,username1);
@@ -376,20 +380,20 @@ int SEND(char *buffer){
 
     char *line;
 
-    line = strtok(msgCopy, ";");
-    line = strtok(NULL, ";");
+    line = strtok(msgCopy, delimiter.c_str());
+    line = strtok(NULL, delimiter.c_str());
     char *sender = line;
-    line = strtok(NULL, ";");
+    line = strtok(NULL, delimiter.c_str());
     char *receiver = line;
-    line = strtok(NULL, ";");
+    line = strtok(NULL, delimiter.c_str());
     char *subject = line;
 
     string msg;
-        line = strtok(NULL, ";");
+        line = strtok(NULL, delimiter.c_str());
     while(line != NULL) {
         msg.append(line);
         msg.append("\n");
-        line = strtok(NULL, ";");
+        line = strtok(NULL, delimiter.c_str());
     }
 
     createMSG(path, sender, receiver, subject, msg);
@@ -403,8 +407,8 @@ int LIST(char* path,char* buffer,int* current_socket){
     /// buffer --> COMMAND;USERNAME;
     char *msgCopy = (char *)malloc(strlen(buffer) * sizeof(char));
     strcpy(msgCopy, buffer);
-    strtok(msgCopy, ";");
-    char* username = strtok(NULL, ";");
+    strtok(msgCopy, delimiter.c_str());
+    char* username = strtok(NULL, delimiter.c_str());
     fs::path p(getUserPath(path, username));
     char buff[BUF] = "";
     strcat(buff,"LIST;");
@@ -430,7 +434,7 @@ if(fs::exists(p) == true) {
         strcat(buff,fileNumber.c_str());
         strcat(buff,": ");
         strcat(buff, getFileInput(path, currentFilename).at(subject_line).c_str());
-        strcat(buff, ";");
+        strcat(buff, delimiter.c_str());
         size = strlen(buff);
         if (buff[size - 2] == '\r' && buff[size - 1] == '\n') {
             size -= 2;
@@ -462,9 +466,9 @@ int READ(char* path,char* buffer, int* current_socket){
     /// buffer --> COMMAND;USERNAME;NUMBER
     char *msgCopy = (char *)malloc(strlen(buffer) * sizeof(char));
     strcpy(msgCopy, buffer);
-    strtok(msgCopy, ";");
-    char* username = strtok(NULL, ";");
-    char* fileNumber = strtok(NULL, ";");
+    strtok(msgCopy, delimiter.c_str());
+    char* username = strtok(NULL, delimiter.c_str());
+    char* fileNumber = strtok(NULL, delimiter.c_str());
     char buff[BUF] = "";
 
     std::vector<string> lines = getFileInput(getUserPath(path,username),getUserFileName(username,fileNumber));
@@ -478,7 +482,7 @@ int READ(char* path,char* buffer, int* current_socket){
     }else{
       //  strcat(buff,"READ;");
         for (const auto &i : lines){
-            strcat(buff, ";");
+            strcat(buff, delimiter.c_str());
             strcat(buff, i.c_str());
         }
     }
@@ -492,9 +496,9 @@ int DELETE(char* path,char* buffer, int* current_socket){
     /// buffer --> COMMAND;USERNAME;NUMBER
     char *msgCopy = (char *)malloc(strlen(buffer) * sizeof(char));
     strcpy(msgCopy, buffer);
-    strtok(msgCopy, ";");
-    char* username = strtok(NULL, ";");
-    char* fileNumber = strtok(NULL, ";");
+    strtok(msgCopy, delimiter.c_str());
+    char* username = strtok(NULL, delimiter.c_str());
+    char* fileNumber = strtok(NULL, delimiter.c_str());
 
     string filename = getUserPath(path,username);
     filename.append(getUserFileName(username,fileNumber));
@@ -556,7 +560,7 @@ int QUIT(int *current_socket)
 char* getCommand(char* buffer){
     char *currentBuffer = (char *)malloc(strlen(buffer) * sizeof(char));
     strcpy(currentBuffer, buffer);
-    return strtok(currentBuffer, ";");
+    return strtok(currentBuffer, delimiter.c_str());
 }
 vector<string> getFileInput(std::string path, std::string file){
     std::string filename = "";
@@ -599,14 +603,16 @@ string getUserFileName(char* username, char* fileNumber){
 //LDAP
 string checkLOGIN(char* ldap_username, char* ldap_password){
 
-    //if(checkBlacklist()){
-     //   return "false";
-   // }
+    if(checkBlacklist() == -1){
+       return "false";
+    }
+
     if(loginCounter > 2){
-      //  addToBlacklist();
+        addToBlacklist();
         loginCounter = 0;
         return "false";
     }
+
     const char *ldapUri = "ldap://ldap.technikum-wien.at:389";
     const int ldapVersion = LDAP_VERSION3;
 
@@ -688,7 +694,6 @@ int rc = 0; // return code
     if (rc != LDAP_SUCCESS)
     {
         fprintf(stderr, "LDAP bind error: %s\n", ldap_err2string(rc));
-        ldap_unbind_ext_s(ldapHandle, NULL, NULL);
         loginCounter++;
         return "false";
     }else{
@@ -700,11 +705,12 @@ int rc = 0; // return code
 }
 
 //BLACKLIST
-/**
+
 int addToBlacklist(){
+    printf("\nSTART BUFFER:\n");
     char Path[] = "./../data/";
     createFolder(Path);
-    char blacklistPath[] = "./../data/blacklist/";
+    //char blacklistPath[] = "./../data/blacklist/";
     createFolder(blacklistPath);
     strcat(blacklistPath,"blacklist.txt");
     // ZEIT
@@ -723,6 +729,25 @@ int addToBlacklist(){
     pthread_mutex_unlock(&mutexLockBlacklist);
     return 0;
 }
+
+
+int checkBlacklist(){
+    std::ifstream in("../data/blacklist/blacklist.txt");
+   // std::ifstream in("../data/blacklist/blacklist.txt");
+    if (in.is_open()){
+        std::string line;
+        while(std::getline(in,line)){
+            if(strcmp(currentIP.c_str(),line.c_str())==0){
+                std:: cout << "\nIP : " << line << " BLOCKED\n";
+                return -1;
+            }
+        }
+        in.close();
+    }
+        return 0;
+}
+
+/**
 int checkBlacklist(){
     char blacklistPath[] = "./data/blacklist.txt";
     char buffer[BUF];
@@ -731,6 +756,7 @@ int checkBlacklist(){
 
 
     pthread_mutex_lock(&mutexLockBlacklist);
+
     filePtr1 = fopen(blacklistPath, "r");
 
 
@@ -738,6 +764,7 @@ int checkBlacklist(){
     {
         filePtr1 = fopen(blacklistPath, "w");
     }
+
     else
     {
         while (!feof(filePtr1))
@@ -748,26 +775,27 @@ int checkBlacklist(){
             {
                 strcpy(buffer, "\0");
                 fgets(buffer, BUF, filePtr1);
+
                 if (strncmp(ipAddress, buffer, strlen(ipAddress)) == 0)
                 {
                     fclose(filePtr1);
                     pthread_mutex_unlock(&mutexLockBlacklist);
                     return 1;
                 }
+
+
             }
         }
     }
-
-
-
 
 
     fclose(filePtr1);
     pthread_mutex_unlock(&mutexLockBlacklist);
     return 0;
 }
-**/
 
+
+**/
 
  // TOOLS
 void createMSG(char* path, char *sender, char *receiver, char *subject, std::string msg)
@@ -824,17 +852,20 @@ void commandHandler(char* command, char* buffer, int* current_socket){
         string loginData = LOGIN(buffer);
         sprintf(MSG,"AUTH;");
         strcat(MSG,loginData.c_str());
-        strcat(MSG,";");
-        int status = 0;
+        strcat(MSG,delimiter.c_str());
+
+        //int status = 0;
+
         if(loginData == "false"){
-            status = -1;
+            //status = -1;
             strcat(MSG,"ERROR - LOGIN");
         }else{
             strcat(MSG,"SUCCESS - LOGIN");
         }
 
+
         sendToClient(current_socket,MSG);
-        sendStatus(status,current_socket);
+        //sendStatus(status,current_socket);
         memset(buffer,0,BUF);
         memset(MSG,0,BUF);
     }
@@ -934,6 +965,7 @@ void sendToClient(int* current_socket,char *buffer){
      //ENTFERNEN \r und \n
     if (buffer[size - 2] == '\r' && buffer[size - 1] == '\n'){size -= 2;buffer[size] = 0;}
     else if (buffer[size - 1] == '\n'){--size;buffer[size] = 0;}
+
     if ((send(*current_socket, buffer, strlen(buffer), 0)) == -1){perror("send error");} // SENDET AN CLIENT
     memset(buffer,0,BUF); // LEERT DEN BUFFER
 }

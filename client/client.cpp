@@ -175,7 +175,6 @@ void respHandler(char *buff){
     char *currentBuffer = (char *)malloc(strlen(buff) * sizeof(char));
     char *line;
     strcpy(currentBuffer, buff);
-    //int line_counter = 0;
     line = strtok(currentBuffer, ";");
 
   if(strcmp(line,"AUTH") == 0){
@@ -193,7 +192,6 @@ void respHandler(char *buff){
           line = strtok(NULL, ";");
           if(line == NULL) {break;};
       }
-     // printf("%s\n",line);
   }
 
 }
@@ -224,7 +222,6 @@ void commandHandler(){
 //////////////////////////////////////////////
 
 /// Getter ///////////////////////////////////
-
 void printMsgList(list<string> MSG) {
     MSG.sort();
     int size = MSG.size();
@@ -240,7 +237,6 @@ void printMsgList(list<string> MSG) {
     std::cout << "|_______________________________|\n";
 
 }
-
 void getMsgList(char *line){
     list<string> MSG_list;  // LISTE ALLER MSG
     line = strtok(NULL, ";");
@@ -255,9 +251,6 @@ void getMsgList(char *line){
     printMsgList(MSG_list);
     MSG_list.clear();
 }
-
-
-
 void printMSG(char *line){
 
     // ERSTES ELEMENT IGNORE
@@ -370,7 +363,8 @@ void LOGIN(char* buffer){
     std::cin.getline(password,30);
     strcat(buffer,password);
 
-    sendToServer(buffer);
+    clearBUFF();
+   // sendToServer(buffer);
 }
 // -> SEND
 void SEND(){
@@ -405,7 +399,7 @@ void SEND(){
     std::strcat(buffer,temp_msg);
     std::strcat(buffer,";");
 
-    void clearBUFF();
+    clearBUFF();
     std::cout << "  MSG: ";
 
     string end = ".";
