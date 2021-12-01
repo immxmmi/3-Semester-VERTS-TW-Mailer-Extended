@@ -609,9 +609,9 @@ string checkLOGIN(char* ldap_username, char* ldap_password){
     int check = checkBlacklist();
 
     if(check!= 0){
-        printf("\n CHECK :: %d\n",check);
-       // updateBlackList(check);
+       if(updateBlackList(check) != 0){
         return "false";
+       }
     }
 
     if(loginCounter > 1){
@@ -714,7 +714,6 @@ int rc = 0; // return code
 //BLACKLIST
 
 int addToBlacklist(){
-    printf("\nSTART BUFFER:\n");
     char Path[] = "./../data/";
     createFolder(Path);
     //char blacklistPath[] = "./../data/blacklist/";
@@ -794,15 +793,20 @@ void deleteLine(int lineNumber){
 
 
 int updateBlackList(int lineNumber){
-    string time = getTime(lineNumber);
 
-   // if(time == ){
+    long check_time = stol(getTime(lineNumber));
+
+    time_t currentTime = time(NULL)-60;
+
+    if(check_time < (currentTime)){
         deleteLine(lineNumber);
         deleteLine(lineNumber);
+        return 0;
+    }else{
+        std::cout << "IP GESPERRT - Noch "<< check_time - currentTime << " Sekunden" << endl;
+    }
 
-    //}
-
-    return 0;
+    return -1;
 }
 
 
