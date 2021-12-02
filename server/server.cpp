@@ -36,7 +36,7 @@ using std::ifstream; using std::vector;
 int server_socket = -1;
 int new_socket = -1;
 int abortRequested = 0;
-int loginCounter = 0;
+int loginCounter = 1;
 char buffer[BUF] = "";
 string delimiter (";");
 ////////////////////////////////////
@@ -606,7 +606,7 @@ string getUserFileName(char* username, char* fileNumber){
 //LDAP
 string checkLOGIN(char* ldap_username, char* ldap_password){
 
-    std::cout<< loginCounter << endl;
+    std::cout<< "(3/" <<loginCounter << ")" <<endl;
     int check = checkBlacklist();
 
     if(check!= 0){
@@ -632,7 +632,7 @@ string checkLOGIN(char* ldap_username, char* ldap_password){
 
         strcpy(rawLdapUser, ldap_username);
         sprintf(ldapBindUser, "uid=%s,ou=people,dc=technikum-wien,dc=at", rawLdapUser);
-        printf("user set to: %s\n", ldapBindUser);
+      //  printf("user set to: %s\n", ldapBindUser);
 
     /////////////////////////////////////////////////////////
 
@@ -640,7 +640,7 @@ string checkLOGIN(char* ldap_username, char* ldap_password){
 // read password (bash: export ldappw=<yourPW>)
     char ldapBindPassword[256];
      strcpy(ldapBindPassword, ldap_password);
-     printf("\nSET PW: ... \n");
+   //  printf("\nSET PW: ... \n");
 
 /////////////////////////////////////////////////////////
 
@@ -659,7 +659,7 @@ int rc = 0; // return code
         fprintf(stderr, "ldap_init failed\n");
         return "false";
     }
-    printf("connected to LDAP server %s\n", ldapUri);
+ //   printf("connected to LDAP server %s\n", ldapUri);
 
     ////////////////////////////////////////////////////////////////////////////
     /// set verison options
