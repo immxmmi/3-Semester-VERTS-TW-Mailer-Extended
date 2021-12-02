@@ -308,7 +308,7 @@ string getUsername(){
             if(isalpha(c)){if(isupper(c)) {std::cout<< "ONLY (a-z) (0-9) - TRY AGAIN \n:"; check = false; break;}}
         }
 
-        if(check == true){
+        if(check == false){
             break;
         }else{
             check = true;
