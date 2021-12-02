@@ -183,26 +183,26 @@ void respHandler(char *buff){
     strcpy(currentBuffer, buff);
     line = strtok(currentBuffer, ";");
 
-  if(strcmp(line,"AUTH") == 0){
-      currentUsername = strtok(NULL, ";");
-      if(strcmp(currentUsername,"false")!=0){
-          username = currentUsername;
-      }
+    if(strcmp(line,"AUTH") == 0){
+        currentUsername = strtok(NULL, ";");
+        if(strcmp(currentUsername,"false")!=0){
+            username = currentUsername;
+        }
 
-     printf("%s",strtok(NULL, ";"));
+        printf("%s",strtok(NULL, ";"));
 
-  }else if(strcmp(line,"LIST")==0){
-      getMsgList(line);
-  }else if(strcmp(line,"READs")==0){
-      printMSG(line);
+    }else if(strcmp(line,"LIST")==0){
+        getMsgList(line);
+    }else if(strcmp(line,"READ")==0){
+        printMSG(line);
 
     }else{
-      while(line != NULL){
-          printf("%s\n",line);
-          line = strtok(NULL, ";");
-          if(line == NULL) {break;};
-      }
-  }
+        while(line != NULL){
+            printf("%s\n",line);
+            line = strtok(NULL, ";");
+            if(line == NULL) {break;};
+        }
+    }
 
 }
 void commandHandler(){
@@ -247,22 +247,7 @@ void printMsgList(list<string> MSG) {
     std::cout << "|_______________________________|\n";
 
 }
-void getMsgList(char *line){
-    list<string> MSG_list;  // LISTE ALLER MSG
-    line = strtok(NULL, ";");
-    string currentMSG = "";
-    while(line != NULL) {
-        currentMSG.clear();
-        currentMSG.append(line);
-        MSG_list.push_front(currentMSG);
-        line = strtok(NULL, ";");
-        if (line == NULL) { break; };
-    }
-    printMsgList(MSG_list);
-    MSG_list.clear();
-}
 void printMSG(char *line){
-
     // ERSTES ELEMENT IGNORE
     line = strtok(NULL, ";");
     string currentMSG = "";
@@ -274,31 +259,38 @@ void printMSG(char *line){
     if(line != NULL) {
         //SENDER
         std::cout << "\n ________________________________________";
-        std::cout << "\n|   " << line << " "; line = strtok(NULL, ";");std::cout << line;
+        std::cout << "\n|   " << line << " ";
+        line = strtok(NULL, ";");
+        std::cout << line;
         std::cout << "\n|________________________________________|";
 
         // BETREFF
         line = strtok(NULL, ";");
 
         std::cout << "\n ________________________________________";
-        std::cout << "\n|   " << line << " ";line = strtok(NULL, ";");std::cout << line;
+        std::cout << "\n|   " << line << " ";
+        line = strtok(NULL, ";");
+        std::cout << line;
         std::cout << "\n| _______________________________________|";
         // MSG
         line = strtok(NULL, ";");
 
-        std::cout << "\n _______________________________________";
-        std::cout << "\n|   " << line << "\n";
+        std::cout << "\n _________________________________________";
+
+        std::cout << "\n|   " << line << "                           |\n";
         line = strtok(NULL, ";");
-        std::cout << "    " << line;
+        while(line != NULL){
+            printf("|    %s\n",line);
+            line = strtok(NULL, ";");
+            if(line == NULL) {break;};
+        }
 
 
-        std::cout << "\n|________________________________________|\n";
-        std::cout << " ________________________________________\n";
-        std::cout << "|               < END >                  |\n";
-        std::cout << "|________________________________________|\n";
-      //  if (line == NULL) { break; };
     }
-
+        printf("\n|________________________________________|\n");
+        printf( " ________________________________________\n");
+        printf("|               < END >                  |\n");
+        printf("|________________________________________|\n");
 
 }
 //////////////////////////////////////////////
@@ -344,6 +336,20 @@ string getNumber(){
     };
 
     return text;
+}
+void getMsgList(char *line){
+    list<string> MSG_list;  // LISTE ALLER MSG
+    line = strtok(NULL, ";");
+    string currentMSG = "";
+    while(line != NULL) {
+        currentMSG.clear();
+        currentMSG.append(line);
+        MSG_list.push_front(currentMSG);
+        line = strtok(NULL, ";");
+        if (line == NULL) { break; };
+    }
+    printMsgList(MSG_list);
+    MSG_list.clear();
 }
 //////////////////////////////////////////////
 

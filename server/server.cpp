@@ -301,7 +301,7 @@ void *clientCommunication(void *client_data)
 
    ////////////////////////////////////////////////////////////////////////////
    /// SEND welcome message
-   strcpy(buffer, "Welcome to my First TW-Mailer!\r\nPlease enter your commands.... \r\n");
+   strcpy(buffer, "\nWelcome to my First TW-Mailer!\r\n\nPlease enter your commands.... \r\n");
    sendToClient(current_socket,buffer); // sendet Buffer an Client
    ////////////////////////////////////////////////////////////////////////////
 
@@ -482,7 +482,7 @@ int READ(char* path,char* buffer, int* current_socket){
         memset(buff,0,BUF);
         return -1;
     }else{
-      //  strcat(buff,"READ;");
+        strcat(buff,"READ;");
         for (const auto &i : lines){
             strcat(buff, delimiter.c_str());
             strcat(buff, i.c_str());
